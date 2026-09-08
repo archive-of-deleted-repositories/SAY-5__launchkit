@@ -59,6 +59,8 @@ pytest --cov=app --cov-fail-under=90
 
 ### Frontend tests
 
+Use Node 22.12 or later in the 22.x release line, or Node 24 or later.
+
 ```bash
 cd web
 npm ci
@@ -66,6 +68,9 @@ npm run lint
 npm run typecheck
 npm run test
 ```
+
+The PostCSS override keeps Next's pinned transitive dependency on a patched
+version. Remove it only when Next includes a version that passes `npm audit`.
 
 ## Tenant isolation
 
