@@ -50,9 +50,17 @@ def get_current_user(
         raise _CREDENTIALS_ERROR from exc
 
     user_id = payload.get("sub")
-    if user_id is None:
+    if (
+        not isinstance(user_id, str)
+        or not user_id.isascii()
+        or not user_id.isdecimal()
+        or len(user_id) > 19
+    ):
         raise _CREDENTIALS_ERROR
-    user = db.get(User, int(user_id))
+    numeric_user_id = int(user_id)
+    if not 0 < numeric_user_id <= 2**63 - 1:
+        raise _CREDENTIALS_ERROR
+    user = db.get(User, numeric_user_id)
     if user is None or user.tenant_id != payload.get("tenant_id"):
         raise _CREDENTIALS_ERROR
     return user

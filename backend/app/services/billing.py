@@ -43,6 +43,8 @@ def create_checkout_session(tenant: Tenant, success_url: str, cancel_url: str) -
 
 def verify_signature(payload: bytes, sig_header: str) -> dict:
     settings = get_settings()
+    if not settings.stripe_webhook_secret:
+        raise ValueError("Billing webhook is not configured")
     event = stripe.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
     # Convert the Stripe object to a plain nested dict for downstream handling.
     return json.loads(str(event))

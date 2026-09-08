@@ -7,7 +7,7 @@ with TypeScript.
 
 ## What is included
 
-- Email and password auth with bcrypt hashing and JWT access tokens.
+- Email and password auth with bcrypt-sha256 hashing and JWT access tokens.
 - A tenant (organization) model where every row is scoped to a tenant.
 - A data-access guard that injects the tenant filter and checks row ownership,
   so isolation is enforced server-side rather than by convention.
@@ -34,10 +34,16 @@ Copy the environment template and start the stack:
 
 ```bash
 cp .env.example .env
+export JWT_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 docker compose up --build
 ```
 
 The web app is at http://localhost:3000 and the API at http://localhost:8000.
+The export above creates a local signing key for this shell session. Configure
+one persistent, randomly generated `JWT_SECRET` for a deployment, shared by all
+API workers and retained across restarts. The API refuses to start without a
+key of at least 32 characters; there is no shared default signing key. Changing
+the key invalidates existing access tokens.
 
 ### Backend tests
 
@@ -45,6 +51,7 @@ The web app is at http://localhost:3000 and the API at http://localhost:8000.
 cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
+export JWT_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
 ruff check app tests
 mypy app
 pytest --cov=app --cov-fail-under=90
@@ -113,6 +120,13 @@ python -m bench.check_regression
 
 All configuration is read from environment variables; see `.env.example`. No
 secrets are committed. The provider mode defaults to `fake`.
+
+New passwords use Passlib's bcrypt-sha256 format, preserving all UTF-8 bytes
+within the sign-up limit. Existing bcrypt hashes still verify passwords up to
+72 UTF-8 bytes. Legacy passwords longer than that were irreversibly truncated
+by bcrypt and must be reset through the deployment's account recovery process;
+ambiguous long credentials are rejected. Account recovery is not included in
+this starter. Webhooks reject requests when `STRIPE_WEBHOOK_SECRET` is unset.
 
 ## How this differs
 
