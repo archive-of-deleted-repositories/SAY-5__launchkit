@@ -88,3 +88,17 @@ def test_token_without_expiration_is_rejected(client: TestClient) -> None:
     del payload["exp"]
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     assert client.get("/auth/me", headers=auth_header(token)).status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("claim", "value"),
+    [("exp", []), ("exp", {}), ("exp", float("inf")), ("iat", []), ("iat", {})],
+)
+def test_malformed_time_claim_returns_unauthorized(
+    claim: str, value: object, client: TestClient
+) -> None:
+    settings = get_settings()
+    payload = {"sub": "1", "tenant_id": 1, "iat": int(time.time()), "exp": int(time.time()) + 60}
+    payload[claim] = value
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    assert client.get("/auth/me", headers=auth_header(token)).status_code == 401

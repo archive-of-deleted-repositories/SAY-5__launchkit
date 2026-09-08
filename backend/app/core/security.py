@@ -34,9 +34,13 @@ def create_access_token(subject: str, tenant_id: int) -> str:
 
 def decode_access_token(token: str) -> dict:
     settings = get_settings()
-    return jwt.decode(
-        token,
-        settings.jwt_secret,
-        algorithms=[settings.jwt_algorithm],
-        options={"require": ["sub", "tenant_id", "iat", "exp"]},
-    )
+    try:
+        return jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["sub", "tenant_id", "iat", "exp"]},
+        )
+    except (TypeError, ValueError, OverflowError) as exc:
+        # Some PyJWT versions leak numeric conversion errors for malformed claims.
+        raise jwt.InvalidTokenError("Invalid token claims") from exc
